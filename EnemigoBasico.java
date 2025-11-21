@@ -1,21 +1,23 @@
 package com.mygdx.game;
 
 import com.badlogic.gdx.graphics.Texture;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.math.MathUtils;
 
 public class EnemigoBasico extends Enemigo {
+
     private static final float ESCALA = 0.3f;
     private int direccion;
     private Sound explosionSound;
 
-    public EnemigoBasico(Texture textura, Sound explosionSound, float limiteX) {
+    public EnemigoBasico(Texture textura, Sound explosionSound, float limiteX, float factorDificultad) {
         super(
-            textura,
-            MathUtils.random(0, PantallaJuego.WORLD_WIDTH - textura.getWidth() * ESCALA),
-            PantallaJuego.WORLD_HEIGHT,
-            100f, 80f, 1
+                textura,
+                MathUtils.random(0, PantallaJuego.WORLD_WIDTH - textura.getWidth() * ESCALA),
+                PantallaJuego.WORLD_HEIGHT,
+                100f * factorDificultad, // velocidad vertical escalada
+                80f * factorDificultad,  // velocidad horizontal escalada
+                1
         );
 
         float ancho = textura.getWidth() * ESCALA;
@@ -26,27 +28,20 @@ public class EnemigoBasico extends Enemigo {
         this.explosionSound = explosionSound;
     }
 
+    // Implementa solo el paso de movimiento del Template Method
     @Override
-    public void actualizar(float delta) {
-        if (destruido) return;
-
+    protected void mover(float delta) {
         rect.y -= velocidadVertical * delta;
         rect.x += velocidadHorizontal * direccion * delta;
 
         float anchoPantalla = PantallaJuego.WORLD_WIDTH;
-
         if (rect.x <= 0 || rect.x + rect.width >= anchoPantalla) {
             direccion *= -1;
-            rect.x = Math.max(0, Math.min(rect.x, anchoPantalla - rect.width));
+            rect.x = Math.max(0, Math.min(anchoPantalla - rect.width, rect.x));
         }
 
-        if (rect.y + rect.height < 0) destruido = true;
-    }
-
-    @Override
-    public void render(SpriteBatch batch) {
-        if (!destruido && textura != null) {
-            batch.draw(textura, rect.x, rect.y, rect.width, rect.height);
+        if (rect.y + rect.height < 0) {
+            destruido = true;
         }
     }
 

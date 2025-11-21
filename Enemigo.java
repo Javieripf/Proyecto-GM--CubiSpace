@@ -4,7 +4,9 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Rectangle;
 
+// GM2.2 – Template Method
 public abstract class Enemigo {
+
     // 🔒 Encapsulación y herencia segura
     protected Texture textura;
     protected Rectangle rect;
@@ -24,13 +26,41 @@ public abstract class Enemigo {
         } else {
             this.rect = new Rectangle(x, y, 50, 50); // evita null si textura no se cargó
         }
-
         this.destruido = false;
     }
 
-    // 🔹 Métodos abstractos
-    public abstract void actualizar(float delta);
-    public abstract void render(SpriteBatch batch);
+    // TEMPLATE METHOD: algoritmo fijo de actualización
+    public final void actualizar(float delta) {
+        if (!destruido) {
+            mover(delta);      // paso 1: movimiento (definido por las subclases)
+            atacar(delta);     // paso 2: ataque (hook opcional)
+        }
+        actualizarEstado(delta); // paso 3: lógica común/post-estado (hook opcional)
+    }
+
+    // TEMPLATE METHOD: algoritmo fijo de renderizado
+    public final void render(SpriteBatch batch) {
+        if (!destruido && textura != null) {
+            batch.draw(textura, rect.x, rect.y, rect.width, rect.height);
+        }
+        renderExtra(batch); // hook para dibujar cosas adicionales (balas, efectos, etc.)
+    }
+
+    // 🔹 Pasos que deben definir las subclases
+    protected abstract void mover(float delta);
+
+    // 🔹 Hooks opcionales
+    protected void atacar(float delta) {
+        // por defecto no hace nada
+    }
+
+    protected void actualizarEstado(float delta) {
+        // por defecto no hace nada
+    }
+
+    protected void renderExtra(SpriteBatch batch) {
+        // por defecto no hace nada
+    }
 
     // 🔹 Lógica común
     public void recibirDano(int dano) {
@@ -51,7 +81,7 @@ public abstract class Enemigo {
         return vida;
     }
 
-    // 🔹 Setter opcional (por si luego necesitas modificar)
+    // 🔹 Setter opcional
     public void setVida(int vida) {
         this.vida = vida;
     }
