@@ -21,7 +21,7 @@ import java.util.Iterator;
 
 public class PantallaJuego implements Screen {
 
-    private enum Estado { JUGANDO, GAME_OVER }
+    private enum Estado { JUGANDO, PAUSA, GAME_OVER }
 
     private final JuegoProgra game;
     private SpriteBatch batch;
@@ -52,6 +52,10 @@ public class PantallaJuego implements Screen {
     // 🧮 Puntos y récord
     private int puntajeActual = 0;
     private int highScore = 0;
+
+    // 🎚️ Dificultad
+    private float factorDificultad = 1.0f;   // 1.0 = velocidad base
+    private float tiempoDificultad = 0f;     // para ir subiendo la dificultad con el tiempo
 
     public PantallaJuego(final JuegoProgra game) {
         this.game = game;
@@ -115,21 +119,43 @@ public class PantallaJuego implements Screen {
         tiempoEnemigo = 0f;
         enemigosNormalesContados = 0;
         estado = Estado.JUGANDO;
-        puntajeActual = 0; // reinicia al comenzar
+        puntajeActual = 0;
+        factorDificultad = 1.0f;   // al reiniciar, dejamos la dificultad base
+        tiempoDificultad = 0f;
     }
 
     private void actualizarJuego(float delta) {
         tiempoEnemigo += delta;
 
-        // Generación de enemigos
+        // 🔼 Subir dificultad con el tiempo
+        tiempoDificultad += delta;
+        if (tiempoDificultad >= 10f) { // cada 10 segundos aumenta un poco
+            factorDificultad += 0.1f;
+            tiempoDificultad = 0f;
+            // opcional: Gdx.app.log("DIFICULTAD", "Nuevo factor: " + factorDificultad);
+        }
+
+        // Generación de enemigos con dificultad aplicada
         if (tiempoEnemigo > 1.5f) {
             boolean crearAvanzado = Math.random() < 0.1f || enemigosNormalesContados >= 5;
 
             if (crearAvanzado && enemigosAvanzados.size() < 3) {
-                enemigosAvanzados.add(new Enemigo2(texEnemigo2, texLaserEnemigo, enemyShoot, explosionSound, WORLD_WIDTH));
+                enemigosAvanzados.add(new Enemigo2(
+                        texEnemigo2,
+                        texLaserEnemigo,
+                        enemyShoot,
+                        explosionSound,
+                        WORLD_WIDTH,
+                        factorDificultad
+                ));
                 enemigosNormalesContados = 0;
             } else if (!crearAvanzado && enemigosBasicos.size() < 5) {
-                enemigosBasicos.add(new EnemigoBasico(texEnemigo, explosionSound, WORLD_WIDTH));
+                enemigosBasicos.add(new EnemigoBasico(
+                        texEnemigo,
+                        explosionSound,
+                        WORLD_WIDTH,
+                        factorDificultad
+                ));
                 enemigosNormalesContados++;
             }
 
@@ -141,7 +167,6 @@ public class PantallaJuego implements Screen {
         if (nave.getVidas() <= 0) {
             estado = Estado.GAME_OVER;
             if (mainTheme != null) mainTheme.stop();
-            // Actualizar highscore si corresponde
             if (puntajeActual > highScore) highScore = puntajeActual;
             return;
         }
@@ -168,7 +193,7 @@ public class PantallaJuego implements Screen {
                     itBala.remove();
                     itE.remove();
                     if (enemyHit != null) enemyHit.play(0.6f);
-                    puntajeActual += 100; // 💥 +100 por enemigo básico
+                    puntajeActual += 100;
                     impacto = true;
                     break;
                 }
@@ -188,9 +213,7 @@ public class PantallaJuego implements Screen {
                     e2.recibirDano(1);
                     itBala.remove();
                     if (enemyHit != null) enemyHit.play(0.6f);
-
-                    // Si el enemigo muere, sumar puntos
-                    if (e2.estaDestruido()) puntajeActual += 300; // 💥 +300 por avanzado
+                    if (e2.estaDestruido()) puntajeActual += 300;
                     break;
                 }
             }
@@ -217,8 +240,17 @@ public class PantallaJuego implements Screen {
         Gdx.gl.glClearColor(0, 0, 0, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
+        // 🔹 Control de pausa / reanudar
         if (estado == Estado.JUGANDO) {
-            actualizarJuego(dt);
+            if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+                estado = Estado.PAUSA;
+            } else {
+                actualizarJuego(dt);
+            }
+        } else if (estado == Estado.PAUSA) {
+            if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+                estado = Estado.JUGANDO;
+            }
         } else if (estado == Estado.GAME_OVER) {
             if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
                 inicializarJuego();
@@ -227,6 +259,7 @@ public class PantallaJuego implements Screen {
         }
 
         batch.begin();
+
         batch.draw(texFondo, 0, 0, WORLD_WIDTH, WORLD_HEIGHT);
         nave.render(batch);
         for (EnemigoBasico e : enemigosBasicos) e.render(batch);
@@ -241,6 +274,19 @@ public class PantallaJuego implements Screen {
             font.setColor(Color.RED);
             font.draw(batch, "GAME OVER - Presiona ENTER para reiniciar",
                     WORLD_WIDTH / 2f - 280, WORLD_HEIGHT / 2f);
+        }
+
+        if (estado == Estado.PAUSA) {
+            batch.setColor(0, 0, 0, 0.5f);
+            batch.draw(overlayNegro, 0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+            batch.setColor(1, 1, 1, 1);
+
+            font.setColor(Color.YELLOW);
+            font.draw(batch, "PAUSA",
+                    WORLD_WIDTH / 2f - 70, WORLD_HEIGHT / 2f + 40);
+            font.setColor(Color.WHITE);
+            font.draw(batch, "Presiona ESC para continuar",
+                    WORLD_WIDTH / 2f - 220, WORLD_HEIGHT / 2f - 10);
         }
 
         batch.end();
