@@ -15,7 +15,8 @@ Características Principales
   - Enemigo avanzado → +300 pts
 - HUD con vidas, puntaje y récord
 - Música y efectos de sonido
-
+-Sistema de dificultad progresiva según puntaje
+-Menú de pausa (tecla ESC)
 Enemigos
 Enemigo Básico: 1 vida, movimiento lateral y descendente, se destruye al colisionar.
 Enemigo Avanzado: 3 vidas, dispara cada 2.5 s y lanza un disparo triple al morir.
